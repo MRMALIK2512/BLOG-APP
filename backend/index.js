@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(cors());
 
 // Initialize SQLite Database
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.db');
+const dbPath = process.env.DB_PATH || path.join(__dirname, './database.db');
 
 const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
