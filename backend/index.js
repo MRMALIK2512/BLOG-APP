@@ -2,13 +2,16 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const app = express();
-
+const path = require('path');
+require('dotenv').config();
 // Middleware
 app.use(express.json());
 app.use(cors());
 
 // Initialize SQLite Database
-const db = new sqlite3.Database(':memory:');
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.db');
+
+const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
   db.run('CREATE TABLE Post (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT)');
 });
@@ -98,8 +101,8 @@ app.put('/api/posts/:id', (req, res) => {
       }
     );
   });
-  
+  const PORT = process.env.PORT || 5000;
 // Start server
-app.listen(5000, () => {
+app.listen(PORT , () => {
   console.log('Server running on port 5000');
 });
