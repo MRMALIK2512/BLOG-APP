@@ -3,13 +3,12 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const app = express();
 const path = require('path');
-require('dotenv').config();
 // Middleware
 app.use(express.json());
 app.use(cors());
 
 // Initialize SQLite Database
-const dbPath = process.env.DB_PATH || path.join(__dirname, './database.db');
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.db');
 
 const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
