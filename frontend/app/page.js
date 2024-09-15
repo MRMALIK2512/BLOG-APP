@@ -13,14 +13,16 @@ export default function Home() {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API}/posts`);
-        setPosts(data); 
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API}/posts`);
+        console.log(response.data)
+        setPosts(response.data); 
         setLoading(false);
       } catch (err) {
         console.error(err);
         setError('Failed to fetch posts');
         setLoading(false);
       }
+      setLoading(false);
     };
 
     fetchPosts();

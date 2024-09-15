@@ -1,107 +1,80 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const cors = require('cors');
 const app = express();
-const path = require('path');
-// Middleware
 app.use(express.json());
+
+app.listen(5000, () => {
+  console.log('Server running on http://localhost:5000');
+});
+
+const cors = require('cors');
 app.use(cors());
 
-// Initialize SQLite Database
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.db');
+const Database = require('better-sqlite3');
+const db = new Database('./database.db');
 
-const db = new sqlite3.Database(dbPath);
-db.serialize(() => {
-  db.run('CREATE TABLE Post (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT)');
-});
+db.exec(`
+  CREATE TABLE IF NOT EXISTS Post (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL
+  )
+`);
 
-// GET /posts - Retrieve all blog posts
+
+// GET /api/posts
 app.get('/api/posts', (req, res) => {
-  db.all('SELECT * FROM Post', [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(rows);
-  });
+  console
+  const posts = db.prepare('SELECT * FROM Post').all();
+  res.json(posts);
 });
 
-// GET /posts/:id - Retrieve a single post by ID
-app.get('/api/posts/:id', (req, res) => {
-  const { id } = req.params;
-  db.get('SELECT * FROM Post WHERE id = ?', [id], (err, row) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!row) {
-      res.status(404).json({ error: 'Post not found' });
-      return;
-    }
-    res.json(row);
-  });
-});
-
-// POST /posts - Create a new post
+// POST /api/posts
 app.post('/api/posts', (req, res) => {
   const { title, content } = req.body;
-  if (!title || !content) {
-    res.status(400).json({ error: 'Title and content are required' });
-    return;
-  }
-  const stmt = db.prepare('INSERT INTO Post (title, content) VALUES (?, ?)');
-  stmt.run([title, content], function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.status(201).json({ id: this.lastID });
-  });
-  stmt.finalize();
+  const insert = db.prepare('INSERT INTO Post (title, content) VALUES (?, ?)');
+  insert.run(title, content);
+  res.status(201).json({ message: 'Post created' });
 });
 
-// DELETE /posts/:id - Delete a post by ID
+// PUT /api/posts/:id
+app.put('/api/posts/:id', (req, res) => {
+  const { title, content } = req.body;
+  const { id } = req.params;
+  const update = db.prepare('UPDATE Post SET title = ?, content = ? WHERE id = ?');
+  const result = update.run(title, content, id);
+  if (result.changes === 0) {
+    res.status(404).json({ message: 'Post not found' });
+  } else {
+    res.json({ message: 'Post updated' });
+  }
+});
+
+// PUT /api/posts/:id
+app.get('/api/posts/:id', (req, res) => {
+try{
+  const { id } = req.params;
+  const result = db.prepare('SELECT * FROM Post where id =  ?').get(id);
+  if(result){
+    return res.json(result);
+  }
+  else{
+    return res.status(404).json({ message: 'Post not found' });
+  }
+}
+catch{
+ res.status(500).json({message : "internal sever error"})
+}
+});
+
+
+// DELETE /api/posts/:id
 app.delete('/api/posts/:id', (req, res) => {
   const { id } = req.params;
-  db.run('DELETE FROM Post WHERE id = ?', [id], function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (this.changes === 0) {
-      res.status(404).json({ error: 'Post not found' });
-      return;
-    }
+  const remove = db.prepare('DELETE FROM Post WHERE id = ?');
+  const result = remove.run(id);
+  if (result.changes === 0) {
+    res.status(404).json({ message: 'Post not found' });
+  } else {
     res.json({ message: 'Post deleted' });
-  });
-});
-
-app.put('/api/posts/:id', (req, res) => { 
-    const { id } = req.params;
-    const { title, content } = req.body;
-
-    db.run(
-      'UPDATE Post SET title = ?, content = ? WHERE id = ?',
-      [title, content, id],
-      function (err) {
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-  
-      
-        if (this.changes === 0) {
-          res.status(404).json({ error: 'Post not found' });
-          return;
-        }
-  
-    
-        res.json({ message: 'Post updated successfully' });
-      }
-    );
-  });
-  const PORT = process.env.PORT || 5000;
-// Start server
-app.listen(PORT , () => {
-  console.log('Server running on port 5000');
+  }
 });
